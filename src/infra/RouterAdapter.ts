@@ -14,25 +14,27 @@ import { ProducerFactoryAdapter } from "../factories/ProducerFactoryAdapter";
 export class RouterAdapter {
   constructor(
     private readonly httpServer: IHttpServerAdapter,
-    private readonly database: IDatabase
+    private readonly database: IDatabase,
   ) {}
 
   start(): void {
-    console.log("> [RouterAdapter] starting...");
+    console.log("> [RouterAdapter] starting routes...");
 
     const movieFactory = new MovieFactoryAdapter(
       this.httpServer,
-      this.database
+      this.database,
     );
     movieFactory.makeListMoviesController();
     movieFactory.makeGetMovieByIdController();
 
     const producerFactory = new ProducerFactoryAdapter(
       this.httpServer,
-      this.database
+      this.database,
     );
     producerFactory.makeListProducersController();
     producerFactory.makeGetAwardIntervalsController();
     producerFactory.makeGetMoviesByProducerController();
+
+    console.log("> [RouterAdapter] routes started...");
   }
 }

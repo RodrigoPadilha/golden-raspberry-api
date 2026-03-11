@@ -1,5 +1,7 @@
 import fs from "fs";
 import csvParser from "csv-parser";
+import { Transform, Writable } from "stream";
+import { finished } from "stream/promises";
 import { CreateMovieInput } from "../../../domain/entities/Movie";
 import { CsvLoaderPort } from "../../../domain/ports/outbound/CsvLoaderPort";
 import { MovieRepositoryPort } from "../../../domain/ports/outbound/MovieRepositoryPort";
@@ -10,7 +12,9 @@ export class CsvMovieLoaderAdapter implements CsvLoaderPort {
   async load(filePath: string): Promise<void> {
     const count = await this.movieRepository.count();
     if (count > 0) {
-      console.log("> [CsvMovieLoaderAdapter] Data already loaded, skipping CSV import");
+      console.log(
+        "> [CsvMovieLoaderAdapter] Data already loaded, skipping CSV import",
+      );
       return;
     }
 
@@ -22,24 +26,44 @@ export class CsvMovieLoaderAdapter implements CsvLoaderPort {
     console.log(`> [CsvMovieLoaderAdapter] Loaded ${rows.length} movies`);
   }
 
-  private parseCsv(filePath: string): Promise<CreateMovieInput[]> {
-    return new Promise((resolve, reject) => {
-      const inputs: CreateMovieInput[] = [];
+  private async parseCsv(filePath: string): Promise<CreateMovieInput[]> {
+    const results: CreateMovieInput[] = [];
 
-      fs.createReadStream(filePath)
-        .pipe(csvParser({ separator: ";" }))
-        .on("data", (row) => {
-          inputs.push({
-            year: parseInt(row.year, 10),
-            title: row.title,
-            studios: row.studios,
-            winner: row.winner?.toLowerCase() === "yes",
-            producerNames: this.normalizeProducers(row.producers ?? ""),
-          });
-        })
-        .on("end", () => resolve(inputs))
-        .on("error", reject);
+    const readableStream = fs.createReadStream(filePath);
+    const csvTransformer = csvParser({ separator: ";" });
+
+    const mapperStream = new Transform({
+      objectMode: true,
+      transform: (row, encoding, callback) => {
+        const movie: CreateMovieInput = {
+          year: parseInt(row.year, 10),
+          title: row.title,
+          studios: row.studios,
+          winner: row.winner?.toLowerCase() === "yes",
+          producerNames: this.normalizeProducers(row.producers ?? ""),
+        };
+        callback(null, movie);
+      },
     });
+
+    const writableStream = new Writable({
+      objectMode: true,
+      write(movie, encoding, callback) {
+        results.push(movie);
+        callback();
+      },
+    });
+
+    // O pipeline conecta as streams
+    const stream = readableStream
+      .pipe(csvTransformer)
+      .pipe(mapperStream)
+      .pipe(writableStream);
+
+    // Aguarda a stream terminar sem precisar de 'new Promise'
+    await finished(stream);
+
+    return results;
   }
 
   private normalizeProducers(raw: string): string[] {
