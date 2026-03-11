@@ -4,7 +4,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaDatabaseAdapter } from "./adapters/outbound/database/PrismaDatabaseAdapter";
 import { PrismaMovieRepository } from "./adapters/outbound/persistence/PrismaMovieRepository";
 import { CsvMovieLoaderAdapter } from "./adapters/outbound/csv/CsvMovieLoaderAdapter";
-import { ExpressHttpServerAdapter } from "./adapters/inbound/http/ExpressHttpServerAdapter";
+import { ExpressHttpServerAdapter } from "./adapters/inbound/http/routes/ExpressHttpServerAdapter";
 import { RouterAdapter } from "./infra/RouterAdapter";
 
 export interface AppContext {
@@ -17,7 +17,9 @@ export interface BootstrapOptions {
   csvFilePath?: string;
 }
 
-export async function bootstrap(options?: BootstrapOptions): Promise<AppContext> {
+export async function bootstrap(
+  options?: BootstrapOptions,
+): Promise<AppContext> {
   const database: IDatabase = new PrismaDatabaseAdapter();
   await database.initDatabase(options?.databaseUrl);
 

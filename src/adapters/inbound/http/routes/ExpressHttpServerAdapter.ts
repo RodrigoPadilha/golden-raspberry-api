@@ -1,11 +1,11 @@
 import express, { Application, Request, Response } from "express";
 import swaggerUi from "swagger-ui-express";
-import swaggerDocument from "./docs/swagger.json";
+import swaggerDocument from "./../docs/swagger.json";
 import {
   IHttpServerAdapter,
   HttpInput,
   HttpOutput,
-} from "../../ports/inbound/IHttpServerAdapter";
+} from "../../../ports/inbound/IHttpServerAdapter";
 
 export class ExpressHttpServerAdapter implements IHttpServerAdapter {
   private readonly app: Application;
@@ -27,18 +27,24 @@ export class ExpressHttpServerAdapter implements IHttpServerAdapter {
     this.app.get("/health", (_req, res) => {
       res.json({ status: "ok", timestamp: new Date().toISOString() });
     });
-    console.log("> [ExpressHttpServerAdapter] health check registered at /health");
+    console.log(
+      "> [ExpressHttpServerAdapter] health check registered at /health",
+    );
   }
 
   private setupDocs(): void {
-    this.app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+    this.app.use(
+      "/api/docs",
+      swaggerUi.serve,
+      swaggerUi.setup(swaggerDocument),
+    );
     console.log("> [ExpressHttpServerAdapter] Swagger UI at /api/docs");
   }
 
   register(
     method: "get" | "post" | "put" | "delete" | "patch",
     path: string,
-    handler: (input: HttpInput) => Promise<HttpOutput>
+    handler: (input: HttpInput) => Promise<HttpOutput>,
   ): void {
     this.app[method](path, async (req: Request, res: Response) => {
       const input: HttpInput = {
@@ -55,7 +61,9 @@ export class ExpressHttpServerAdapter implements IHttpServerAdapter {
   async start(port: number): Promise<void> {
     return new Promise((resolve) => {
       this.server = this.app.listen(port, () => {
-        console.log(`> [ExpressHttpServerAdapter] Server running on port ${port}`);
+        console.log(
+          `> [ExpressHttpServerAdapter] Server running on port ${port}`,
+        );
         resolve();
       });
     });
