@@ -1,0 +1,34 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-arm64-openssl-3.0.x"]
+}
+
+model Movie {
+  id        Int             @id @default(autoincrement())
+  year      Int
+  title     String
+  studios   String
+  winner    Boolean         @default(false)
+  producers MovieProducer[]
+}
+
+model Producer {
+  id     Int             @id @default(autoincrement())
+  name   String          @unique
+  movies MovieProducer[]
+}
+
+model MovieProducer {
+  id         Int      @id @default(autoincrement())
+  movieId    Int      @map("movie_id")
+  producerId Int      @map("producer_id")
+  movie      Movie    @relation(fields: [movieId], references: [id])
+  producer   Producer @relation(fields: [producerId], references: [id])
+
+  @@unique([movieId, producerId])
+}

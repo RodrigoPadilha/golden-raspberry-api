@@ -1,0 +1,12 @@
+services:
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=file:./dev.db
+      - CSV_FILE_PATH=/data/Movielist.csv
+    volumes:
+      - ./prisma:/app/prisma
+

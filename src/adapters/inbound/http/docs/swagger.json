@@ -1,0 +1,260 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Golden Raspberry Awards API",
+    "description": "API para consulta de filmes indicados e vencedores do Golden Raspberry Awards (Framboesa de Ouro). Permite consultar filmes e obter os produtores com maior e menor intervalo entre prêmios consecutivos.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "API base path"
+    }
+  ],
+  "paths": {
+    "/movies": {
+      "get": {
+        "summary": "Listar todos os filmes",
+        "description": "Retorna todos os filmes carregados do CSV, ordenados por ano.",
+        "tags": ["Movies"],
+        "responses": {
+          "200": {
+            "description": "Lista de filmes retornada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Movie" }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/movies/{id}": {
+      "get": {
+        "summary": "Buscar filme por ID",
+        "description": "Retorna um filme específico pelo seu ID.",
+        "tags": ["Movies"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID numérico do filme",
+            "schema": { "type": "integer", "example": 1 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Filme encontrado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Movie" }
+              }
+            }
+          },
+          "400": {
+            "description": "ID inválido",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "404": {
+            "description": "Filme não encontrado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/producers/awards-interval": {
+      "get": {
+        "summary": "Obter intervalos de prêmios dos produtores",
+        "description": "Retorna o(s) produtor(es) com o maior intervalo entre dois prêmios consecutivos e o(s) produtor(es) com o menor intervalo.",
+        "tags": ["Producers"],
+        "responses": {
+          "200": {
+            "description": "Intervalos calculados com sucesso",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AwardIntervalResult" },
+                "example": {
+                  "min": [
+                    {
+                      "producer": "Joel Silver",
+                      "interval": 1,
+                      "previousWin": 1990,
+                      "followingWin": 1991
+                    }
+                  ],
+                  "max": [
+                    {
+                      "producer": "Matthew Vaughn",
+                      "interval": 13,
+                      "previousWin": 2002,
+                      "followingWin": 2015
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/producers": {
+      "get": {
+        "summary": "Listar produtores e número de prêmios",
+        "description": "Retorna todos os produtores encontrados no CSV com a contagem de prêmios vencidos.",
+        "tags": ["Producers"],
+        "responses": {
+          "200": {
+            "description": "Lista de produtores retornada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ProducerSummary" }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/producers/{name}/movies": {
+      "get": {
+        "summary": "Listar filmes por produtor",
+        "description": "Retorna todos os filmes associados ao produtor informado (case-insensitive).",
+        "tags": ["Producers"],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Nome do produtor",
+            "schema": { "type": "string", "example": "Joel Silver" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Filmes encontrados para o produtor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Movie" }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nenhum filme encontrado para o produtor",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Movie": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "year": { "type": "integer", "example": 1980 },
+          "title": { "type": "string", "example": "Can't Stop the Music" },
+          "studios": { "type": "string", "example": "Associated Film Distribution" },
+          "producers": { "type": "string", "example": "Allan Carr" },
+          "winner": { "type": "boolean", "example": true }
+        }
+      },
+      "ProducerAwardInterval": {
+        "type": "object",
+        "properties": {
+          "producer": { "type": "string", "example": "Joel Silver" },
+          "interval": { "type": "integer", "example": 1 },
+          "previousWin": { "type": "integer", "example": 1990 },
+          "followingWin": { "type": "integer", "example": 1991 }
+        }
+      },
+      "AwardIntervalResult": {
+        "type": "object",
+        "properties": {
+          "min": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ProducerAwardInterval" }
+          },
+          "max": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ProducerAwardInterval" }
+          }
+        }
+      },
+      "ProducerSummary": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "Joel Silver" },
+          "winCount": { "type": "integer", "example": 2 }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string", "example": "Internal server error" }
+        }
+      }
+    }
+  }
+}
