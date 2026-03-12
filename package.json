@@ -9,6 +9,7 @@
     "dev": "ts-node src/main.ts",
     "test": "jest --runInBand --forceExit",
     "test:coverage": "jest --runInBand --forceExit --coverage",
+    "test:integration": "jest --runInBand --forceExit --testPathPattern=integration",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push"
   },
