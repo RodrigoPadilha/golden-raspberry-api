@@ -29,9 +29,11 @@ export class ProducerService implements ProducerServicePort {
     return this.movieRepository.findByProducerName(name);
   }
 
-  private calculateIntervals(winners: MovieWithProducers[]): AwardIntervalResult {
-    const producerWins = this.groupWinsByProducer(winners);
-    const intervals = this.buildIntervals(producerWins);
+  private calculateIntervals(
+    winners: MovieWithProducers[],
+  ): AwardIntervalResult {
+    const producerWins = this.groupWinsByProducer(winners); // Exemplo: { "Joel Silver": [1990, 1991] }
+    const intervals = this.buildIntervals(producerWins); // Exemplo: [ { producer: "Joel Silver", interval: 1, previousWin: 1990, followingWin: 1991 } ]
 
     if (intervals.length === 0) {
       return { min: [], max: [] };
@@ -46,7 +48,9 @@ export class ProducerService implements ProducerServicePort {
     };
   }
 
-  private groupWinsByProducer(winners: MovieWithProducers[]): Map<string, number[]> {
+  private groupWinsByProducer(
+    winners: MovieWithProducers[],
+  ): Map<string, number[]> {
     const producerWins = new Map<string, number[]>();
 
     for (const movie of winners) {
@@ -61,16 +65,17 @@ export class ProducerService implements ProducerServicePort {
   }
 
   private buildIntervals(
-    producerWins: Map<string, number[]>
+    producerWins: Map<string, number[]>,
   ): ProducerAwardInterval[] {
     const intervals: ProducerAwardInterval[] = [];
 
     for (const [producer, years] of producerWins) {
-      if (years.length < 2) continue;
+      if (years.length < 2) continue; // Ignora produtores com menos de 2 vitórias (não há intervalo).
 
-      years.sort((a, b) => a - b);
+      years.sort((a, b) => a - b); // Ordena os anos de forma crescente.
 
       for (let i = 1; i < years.length; i++) {
+        // Itera sobre o array de anos de forma crescente.
         intervals.push({
           producer,
           interval: years[i] - years[i - 1],
