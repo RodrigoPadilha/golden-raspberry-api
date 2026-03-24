@@ -28,7 +28,8 @@ COPY Movielist.csv /data/Movielist.csv
 COPY entrypoint.sh ./
 RUN chmod +x entrypoint.sh
 
-ENV DATABASE_URL="file:./dev.db"
+ENV DB_STORAGE_TYPE=file
+ENV DATABASE_URL=file:./dev.db
 ENV PORT=3000
 ENV CSV_FILE_PATH="/data/Movielist.csv"
 

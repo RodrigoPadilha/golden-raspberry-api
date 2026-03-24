@@ -1,10 +1,13 @@
 import request from "supertest";
 import path from "path";
+import os from "os";
 import fs from "fs";
-import { execSync } from "child_process";
 import { Application } from "express";
 import { PrismaClient } from "@prisma/client";
 import { bootstrap } from "../../src/app";
+import type { IDatabase } from "../../src/adapters/ports/outbound/IDatabase";
+import { PrismaMovieRepository } from "../../src/adapters/outbound/persistence/PrismaMovieRepository";
+import { CsvMovieLoaderAdapter } from "../../src/adapters/outbound/csv/CsvMovieLoaderAdapter";
 import {
   getExpectedAwardIntervalsFromCsv,
   getExpectedMovieCountFromCsv,
@@ -12,38 +15,42 @@ import {
   isProducerInCsv,
 } from "./csvAssertions";
 
-const TEST_DB_PATH = path.resolve(__dirname, "../../prisma/test.db");
-const TEST_DB_URL = `file:${TEST_DB_PATH}`;
+const TEST_MEMORY_DB_BASE_PATH = path.join(
+  os.tmpdir(),
+  `golden-raspberry-integration-${process.pid}`,
+);
+const TEST_DB_URL = `file:${TEST_MEMORY_DB_BASE_PATH}?mode=memory&cache=shared`;
 const CSV_PATH = path.resolve(__dirname, "../../Movielist.csv");
 
-let app: Application;
-let database: { getClient(): unknown };
+let app!: Application;
+let prismaClient!: PrismaClient;
+let csvLoader!: CsvMovieLoaderAdapter;
 
 beforeAll(async () => {
-  process.env.DATABASE_URL = TEST_DB_URL;
+  process.env.DB_STORAGE_TYPE = "memory";
+  process.env.DATABASE_URL_MEMORY = TEST_DB_URL;
 
-  // Garante banco limpo a cada execução para carregar o CSV atual
-  if (fs.existsSync(TEST_DB_PATH)) {
-    fs.unlinkSync(TEST_DB_PATH);
-  }
-
-  execSync("npx prisma db push --skip-generate", {
-    env: { ...process.env, DATABASE_URL: TEST_DB_URL },
-    stdio: "pipe",
-  });
-
-  const ctx = await bootstrap({
-    databaseUrl: TEST_DB_URL,
-    csvFilePath: CSV_PATH,
-  });
+  const ctx = await bootstrap({ csvFilePath: CSV_PATH });
+  const database = ctx.database as IDatabase;
 
   app = ctx.httpServer.getApp() as Application;
-  database = ctx.database;
+  prismaClient = database.getClient() as PrismaClient;
+  csvLoader = new CsvMovieLoaderAdapter(new PrismaMovieRepository(prismaClient));
+});
+
+beforeEach(async () => {
+  await prismaClient.movieProducer.deleteMany();
+  await prismaClient.movie.deleteMany();
+  await prismaClient.producer.deleteMany();
+  await csvLoader.load(CSV_PATH);
 });
 
 afterAll(async () => {
-  const client = database.getClient() as PrismaClient;
-  await client.$disconnect();
+  await prismaClient.$disconnect();
+
+  if (fs.existsSync(TEST_MEMORY_DB_BASE_PATH)) {
+    fs.rmSync(TEST_MEMORY_DB_BASE_PATH, { force: true });
+  }
 });
 
 describe("GET /health", () => {

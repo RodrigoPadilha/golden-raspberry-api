@@ -5,6 +5,7 @@ services:
       - "3000:3000"
     environment:
       - PORT=3000
+      - DB_STORAGE_TYPE=file
       - DATABASE_URL=file:./dev.db
       - CSV_FILE_PATH=/data/Movielist.csv
     volumes:

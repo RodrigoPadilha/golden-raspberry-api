@@ -5,6 +5,7 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
+    "prestart": "npm run build",
     "start": "node dist/main.js",
     "dev": "ts-node src/main.ts",
     "test": "jest --runInBand --forceExit",
