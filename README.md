@@ -30,35 +30,48 @@ A aplicação utiliza **Arquitetura Hexagonal** com ingestão de dados via CSV.
    npm install
    ```
 
-2. **Configure as variáveis de ambiente** (opcional; já existe `.env` com valores padrão):
-
-   ```env
-   DATABASE_URL="file:./dev.db"
-   PORT=3000
-   CSV_FILE_PATH="./Movielist.csv"
-   ```
-
-3. **Gere o cliente Prisma e aplique o schema no banco:**
+2. **Gere o cliente Prisma** (obrigatório na primeira vez ou após alterar `prisma/schema.prisma`):
 
    ```bash
    npm run prisma:generate
+   ```
+
+3. **Configure o `.env`** na raiz do projeto (há um exemplo comentado; você pode copiar e ajustar):
+
+   ```env
+   DB_STORAGE_TYPE=memory
+   DATABASE_URL_MEMORY=
+   DATABASE_URL=file:./dev.db
+   PORT=3000
+   CSV_FILE_PATH=./Movielist.csv
+   ```
+
+   - **`DB_STORAGE_TYPE`**: `memory` (padrão recomendado para alinhar ao requisito de banco em memória) ou `file` (SQLite em arquivo no disco, útil para inspecionar o `.db` manualmente).
+   - **`DATABASE_URL`**: usada no modo `file` e pelos comandos Prisma (`prisma db push`, `prisma generate`). No modo `memory`, a aplicação usa `DATABASE_URL_MEMORY` ou um padrão interno (tmpdir + SQLite em memória).
+   - **`DATABASE_URL_MEMORY`**: opcional; se vazio, o adapter monta uma URL em memória automaticamente.
+
+4. **Aplique o schema no banco** — necessário **apenas no modo `file`** (para criar/atualizar o arquivo SQLite referenciado em `DATABASE_URL`):
+
+   ```bash
    npm run prisma:push
    ```
 
-4. **Inicie a aplicação em modo desenvolvimento:**
+   No modo `memory`, não é preciso rodar `prisma:push` para a API subir: o schema em memória é criado na inicialização da aplicação.
+
+5. **Inicie a aplicação:**
 
    ```bash
    npm run dev
    ```
 
-   Ou, após o build, em modo produção:
+   Ou em produção (compila e executa):
 
    ```bash
    npm run build
    npm run start
    ```
 
-A API estará disponível em `http://localhost:3000` (ou na porta definida em `PORT`).
+A API estará em `http://localhost:3000` (ou na porta definida em `PORT`). O arquivo `Movielist.csv` deve existir no caminho configurado em `CSV_FILE_PATH` (por padrão, na raiz do projeto).
 
 ### Opção 2: Via Docker
 
@@ -68,9 +81,9 @@ A API estará disponível em `http://localhost:3000` (ou na porta definida em `P
    docker-compose up --build
    ```
 
-2. A API estará disponível em `http://localhost:3000`.
+2. A API estará em `http://localhost:3000`.
 
-O Dockerfile faz build da aplicação, executa as migrations do Prisma e carrega os dados do arquivo `Movielist.csv` automaticamente.
+O container usa **`DB_STORAGE_TYPE=file`** e **`DATABASE_URL`** apontando para SQLite em arquivo. O `entrypoint` executa `prisma db push` antes de subir o Node, e o CSV é copiado para `/data/Movielist.csv` conforme `CSV_FILE_PATH` no ambiente.
 
 ---
 
@@ -168,6 +181,8 @@ tests/
 
 | Variável | Descrição | Padrão |
 |----------|-----------|--------|
-| `DATABASE_URL` | URL de conexão do banco (SQLite) | `file:./dev.db` |
-| `PORT` | Porta do servidor HTTP | `3000` |
-| `CSV_FILE_PATH` | Caminho do arquivo CSV de filmes | `./Movielist.csv` |
+| `DB_STORAGE_TYPE` | `memory` — SQLite em memória (sem `prisma db push` obrigatório para subir a API). `file` — SQLite em arquivo; use `DATABASE_URL` e rode `prisma db push` antes (local). | `memory` (se ausente ou inválido, trata como memória) |
+| `DATABASE_URL` | URL SQLite no modo **file**; também usada pelo Prisma CLI (`prisma generate` / `db push`). | `file:./dev.db` |
+| `DATABASE_URL_MEMORY` | URL SQLite em memória no modo **memory**; omita ou deixe vazio para usar o padrão (tmpdir). | *(vazio)* |
+| `PORT` | Porta HTTP | `3000` |
+| `CSV_FILE_PATH` | Caminho absoluto ou relativo ao diretório de trabalho do processo para `Movielist.csv` | `./Movielist.csv` |
