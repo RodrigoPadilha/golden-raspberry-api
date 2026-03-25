@@ -22,7 +22,8 @@ export class ProducerService implements ProducerServicePort {
 
   async getAwardIntervals(): Promise<AwardIntervalResult> {
     const winners = await this.movieRepository.findWinners();
-    return this.calculateIntervals(winners);
+    //return this.calculateIntervals(winners);
+    return this.computeAwardIntervalsFromWinners(winners);
   }
 
   async getMoviesByProducer(name: string): Promise<MovieWithProducers[]> {
@@ -86,5 +87,75 @@ export class ProducerService implements ProducerServicePort {
     }
 
     return intervals;
+  }
+
+  private computeAwardIntervalsFromWinners(
+    winners: MovieWithProducers[],
+  ): AwardIntervalResult {
+    const byProducer = this.collectWinYearsByProducer(winners);
+    return this.foldMinMaxIntervals(byProducer);
+  }
+
+  private collectWinYearsByProducer(
+    winners: MovieWithProducers[],
+  ): Map<string, number[]> {
+    const map = new Map<string, number[]>();
+    for (const movie of winners) {
+      for (const producer of movie.producers) {
+        const years = map.get(producer.name);
+        if (years) years.push(movie.year);
+        else map.set(producer.name, [movie.year]);
+      }
+    }
+    return map;
+  }
+
+  private foldMinMaxIntervals(
+    producerYears: Map<string, number[]>,
+  ): AwardIntervalResult {
+    let minGap = Number.POSITIVE_INFINITY;
+    let maxGap = Number.NEGATIVE_INFINITY;
+    const min: ProducerAwardInterval[] = [];
+    const max: ProducerAwardInterval[] = [];
+
+    for (const [producer, years] of producerYears) {
+      if (years.length < 2) continue;
+
+      years.sort((a, b) => a - b);
+
+      for (let i = 1; i < years.length; i++) {
+        const previousWin = years[i - 1];
+        const followingWin = years[i];
+        const interval = followingWin - previousWin;
+        const entry: ProducerAwardInterval = {
+          producer,
+          interval,
+          previousWin,
+          followingWin,
+        };
+
+        if (interval < minGap) {
+          minGap = interval;
+          min.length = 0;
+          min.push(entry);
+        } else if (interval === minGap) {
+          min.push(entry);
+        }
+
+        if (interval > maxGap) {
+          maxGap = interval;
+          max.length = 0;
+          max.push(entry);
+        } else if (interval === maxGap) {
+          max.push(entry);
+        }
+      }
+    }
+
+    if (min.length === 0) {
+      return { min: [], max: [] };
+    }
+
+    return { min, max };
   }
 }
